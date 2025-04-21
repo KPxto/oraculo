@@ -8,7 +8,7 @@ from langchain_community.document_loaders import (WebBaseLoader,
                                                   TextLoader)
 # resolvendo o problema do bloqueio de alguns sites
 # q são bloqueados por segurança. Esta lib nos ajuda com a solução
-from fake_useragent import UserAgent
+#from fake_useragent import UserAgent
 
 
 def carrega_site(url):
@@ -17,7 +17,7 @@ def carrega_site(url):
     for i in range(5):
         try:
             # criando o user agent fake
-            os.environ['USER_AGENT'] = UserAgent().random
+            #os.environ['USER_AGENT'] = UserAgent().random
             loader = WebBaseLoader(url, raise_for_status=True)
             lista_docs = loader.load()
             docs = '\n\n'.join([doc.page_content for doc in lista_docs])
