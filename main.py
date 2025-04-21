@@ -3,6 +3,7 @@ from langchain.memory import ConversationBufferMemory
 
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
+from langchain.prompts import ChatPromptTemplate
 import tempfile
 
 from loaders import (carrega_csv, carrega_pdf,
@@ -11,9 +12,6 @@ from loaders import (carrega_csv, carrega_pdf,
 # ================ App ================
 
 MEMORIA = ConversationBufferMemory()
-MEMORIA.chat_memory.add_user_message('Olá IA, blz?')
-MEMORIA.chat_memory.add_ai_message('Oi, Humano. Tudo bem e vc?')
-
 
 TIPOS_ARQUIVOS_VALIDOS = [
     'Site', 'YouTube', 'Pdf', 'Csv', 'Txt'
@@ -55,14 +53,45 @@ def carrega_arquivo(tipo_arquivo, arquivo):
 
 def carrega_modelo(provedor, modelo, api_key, tipo_arquivo, arquivo):
     doc = carrega_arquivo(tipo_arquivo, arquivo)
+
+    system_message = f'''Você é um assistente amigável chamado Oráculo.
+    Você possui acesso às seguintes informações vindas
+    de um documento do tipo {tipo_arquivo}:
+
+    ####
+    {doc}
+    ####
+
+    Utilize as informações fornecidas para basear as suas respostas.
+
+    Não fale de outro assunto q não seja o conteúdo do documento.
+
+    Se o usuário insistir, diga que vc só tem conhecimento do\
+    conteúdo do documento.
+
+    Se a informação do documento for algo como "Just a moment...\
+    Enable JavaScript and cookies to continue"
+    sugira ao usuário carregar novamente o Oráculo!'''
+
+    template = ChatPromptTemplate.from_messages([
+        ('system', system_message),
+        ('placeholder', '{chat_history}'),
+        ('user', '{input}')
+    ])
+
     chat = CONFIG_MODELOS[provedor]['chat'](model=modelo, api_key=api_key)
-    st.session_state['chat'] = chat
+    chain = template | chat
+    st.session_state['chain'] = chain
 
 
 def pagina_chat():
     st.header("🥷 Bem-vindo ao Oráculo!", divider=True)
 
-    chat_model = st.session_state.get('chat')
+    chain = st.session_state.get('chain')
+    if chain is None:
+        st.error('Carregue o Oráculo!')
+        st.stop()
+
     memoria = st.session_state.get("memoria", MEMORIA)
     for msg in memoria.buffer_as_messages:
         chat = st.chat_message(msg.type)
@@ -74,7 +103,8 @@ def pagina_chat():
         chat.markdown(input_usuario)
 
         chat = st.chat_message('ai')
-        resposta = chat.write_stream(chat_model.stream(input_usuario))
+        resposta = chat.write_stream(chain.stream({
+            'input': input_usuario, 'chat_history': memoria.buffer_as_messages}))
 
         memoria.chat_memory.add_user_message(input_usuario)
         memoria.chat_memory.add_ai_message(resposta)
@@ -84,8 +114,8 @@ def pagina_chat():
 def sidebar():
     tabs = st.tabs(['Upload de Arquivos', 'Seleção de Modelos'])
     with tabs[0]:
-        tipo_arquivo = st.selectbox('Selecione o tipo de arquivo',
-                                     TIPOS_ARQUIVOS_VALIDOS)
+        tipo_arquivo = st.selectbox(
+            'Selecione o tipo de arquivo', TIPOS_ARQUIVOS_VALIDOS)
         if tipo_arquivo.lower() == 'site':
             arquivo = st.text_input(
                 'Digite a URL do site')
@@ -117,12 +147,14 @@ def sidebar():
 
     if st.button('Inicializar Oráculo', use_container_width=True):
         carrega_modelo(provedor, modelo, api_key, tipo_arquivo, arquivo)
+    if st.button('Apagar Histórico de Conversa', use_container_width=True):
+        st.session_state['memoria'] = MEMORIA
 
 
 def main():
-    pagina_chat()
     with st.sidebar:
         sidebar()
+    pagina_chat()
 
 
 if __name__ == "__main__":
