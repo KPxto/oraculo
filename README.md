@@ -34,10 +34,11 @@ O **Oráculo** é uma aplicação construída com [LangChain](https://www.langch
 
 ## 📦 Instalação
 
-```bash
 # 1. Clone o repositório
+```bash
 git clone https://github.com/seu-usuario/oraculo-chat.git
 cd oraculo-chat
+```
 
 # 2. Crie e ative um ambiente virtual
 # Linux/Mac
@@ -59,6 +60,7 @@ pip install -r requirements.txt
 
 ```bash
 streamlit run main.py
+```
 
 2. No navegador que será aberto automaticamente:
 
