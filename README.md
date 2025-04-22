@@ -41,11 +41,11 @@ cd oraculo-chat
 ```
 
 ### 2. Crie e ative um ambiente virtual
-Linux/Mac
+- Linux/Mac
 python -m venv venv
 source venv/bin/activate
 
-Windows
+- Windows
 python -m venv venv
 .\venv\Scripts\activate
 
